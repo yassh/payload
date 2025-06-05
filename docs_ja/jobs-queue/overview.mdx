@@ -1,0 +1,69 @@
+---
+title: ジョブキュー
+label: 概要
+order: 10
+desc: Payload provides all you need to run job queues, which are helpful to offload long-running processes into separate workers.
+keywords: jobs queue, application framework, typescript, node, react, nextjs [翻訳済み]
+---
+Payload's Jobs Queue gives you a simple, yet powerful way to offload large or future tasks to separate compute resources which is a very powerful feature of many application frameworks.
+
+### Example use cases [翻訳済み]
+
+**Non-blocking workloads** [翻訳済み]
+
+You might need to perform some complex, slow-running logic in a Payload [Hook](/docs/hooks/overview) but you don't want that hook to "block" or slow down the response returned from the Payload API. Instead of running this logic directly in a hook, which would block your API response from returning until the expensive work is completed, you can queue a new Job and let it run at a later date.
+
+Examples: [翻訳済み]
+
+- Create vector embeddings from your documents, and keep them in sync as your documents change
+- Send data to a third-party API on document change
+- Trigger emails based on customer actions [翻訳済み]
+
+**Scheduled actions** [翻訳済み]
+
+If you need to schedule an action to be run or processed at a certain date in the future, you can queue a job with the `waitUntil` property set. This will make it so the job is not "picked up" until that `waitUntil` date has passed.
+
+Examples: [翻訳済み]
+
+- Process scheduled posts, where the scheduled date is at a time set in the future
+- Unpublish posts at a given time
+- Send a reminder email to a customer after X days of signing up for a trial [翻訳済み]
+
+**Periodic sync or similar scheduled action** [翻訳済み]
+
+Some applications may need to perform a regularly scheduled operation of some type. Jobs are perfect for this because you can execute their logic using `cron`, scheduled nightly, every twelve hours, or some similar time period.
+
+Examples: [翻訳済み]
+
+- You'd like to send emails to all customers on a regular, scheduled basis
+- Periodically trigger a rebuild of your frontend at night
+- Sync resources to or from a third-party API during non-peak times [翻訳済み]
+
+**Offloading complex operations** [翻訳済み]
+
+You may run into the need to perform computationally expensive functions which might slow down your main Payload API server(s). The Jobs Queue allows you to offload these tasks to a separate compute resource rather than slowing down the server(s) that run your Payload APIs. With Payload Task definitions, you can even keep large dependencies out of your main Next.js bundle by dynamically importing them only when they are used. This keeps your Next.js + Payload compilation fast and ensures large dependencies do not get bundled into your Payload production build.
+
+Examples: [翻訳済み]
+
+- You need to create (and then keep in sync) vector embeddings of your documents as they change, but you use an open source model to generate embeddings
+- You have a PDF generator that needs to dynamically build and send PDF versions of documents to customers
+- You need to use a headless browser to perform some type of logic
+- You need to perform a series of actions, each of which depends on a prior action and should be run in as "durable" of a fashion as possible [翻訳済み]
+
+### How it works [翻訳済み]
+
+There are a few concepts that you should become familiarized with before using Payload's Jobs Queue. We recommend learning what each of these does in order to fully understand how to leverage the power of Payload's Jobs Queue.
+
+1. [Tasks](/docs/jobs-queue/tasks)
+1. [Workflows](/docs/jobs-queue/workflows)
+1. [Jobs](/docs/jobs-queue/jobs)
+1. [Queues](/docs/jobs-queue/queues) [翻訳済み]
+
+All of these pieces work together in order to allow you to offload long-running, expensive, or future scheduled work from your main APIs. [翻訳済み]
+
+Here's a quick overview: [翻訳済み]
+
+- A Task is a specific function that performs business logic
+- Workflows are groupings of specific tasks which should be run in-order, and can be retried from a specific point of failure
+- A Job is an instance of a single task or workflow which will be executed
+- A Queue is a way to segment your jobs into different "groups" - for example, some to run nightly, and others to run every 10 minutes [翻訳済み]

@@ -1,0 +1,77 @@
+---
+title: Row Field [翻訳済み]
+label: 行
+order: 150
+desc: With the Row field you can arrange fields next to each other in the Admin Panel to help you customize your Dashboard. [翻訳済み]
+keywords: row, fields, config, configuration, documentation, Content Management System, cms, headless, javascript, node, react, nextjs [翻訳済み]
+---
+The Row Field is presentational-only and only affects the [Admin Panel](../admin/overview). By using it, you can arrange [Fields](./overview) next to each other horizontally. [翻訳済み]
+
+<LightDarkImage
+  srcLight="__PROTECTED_BLOCK_11__
+  srcDark="__PROTECTED_BLOCK_12__
+  alt="Shows a row field in the Payload Admin Panel"
+  caption="Admin Panel screenshot of a Row field"
+/>
+
+To add a Row Field, set the `type` to `row` in your [Field Config](./overview):
+
+```ts
+import type { Field } from 'payload'
+
+export const MyRowField: Field = {
+  // ...
+  // highlight-start
+  type: 'row',
+  fields: [
+    // ...
+  ],
+  // highlight-end
+}
+```
+
+## Config Options [翻訳済み]
+
+| Option          | Description                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **`fields`** \* | Array of field types to nest within this Row.                                                                             |
+| **`admin`**     | Admin-specific configuration excluding `description`, `readOnly`, and `hidden`. [More details](./overview#admin-options). |
+| **`custom`**    | Extension point for adding custom data (e.g. for plugins)                                                                 |
+
+_\* An asterisk denotes that a property is required._ [翻訳済み]
+
+## Example [翻訳済み]
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      type: 'row', // required
+      fields: [
+        // required
+        {
+          name: 'label',
+          type: 'text',
+          required: true,
+          admin: {
+            width: '50%',
+          },
+        },
+        {
+          name: 'value',
+          type: 'text',
+          required: true,
+          admin: {
+            width: '50%',
+          },
+        },
+      ],
+    },
+  ],
+}
+```

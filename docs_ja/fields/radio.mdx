@@ -1,0 +1,196 @@
+---
+title: Radio Group Field [翻訳済み]
+label: Radio Group [翻訳済み]
+order: 120
+desc: The Radio field type allows for the selection of one value from a predefined set of possible values. Learn how to use Radio fields, see examples and options. [翻訳済み]
+keywords: radio, fields, config, configuration, documentation, Content Management System, cms, headless, javascript, node, react, nextjs [翻訳済み]
+---
+The Radio Field allows for the selection of one value from a predefined set of possible values and presents a radio group-style set of inputs to the [Admin Panel](../admin/overview). [翻訳済み]
+
+<LightDarkImage
+  srcLight="__PROTECTED_BLOCK_36__
+  srcDark="__PROTECTED_BLOCK_37__
+  alt="Shows a Radio field in the Payload Admin Panel"
+  caption="Admin Panel screenshot of a Radio field"
+/>
+
+To add a Radio Field, set the __PROTECTED_BLOCK_7__ to __PROTECTED_BLOCK_8__ in your [Field Config](./overview):
+
+__PROTECTED_BLOCK_0__
+
+## Config Options
+
+| Option                 | Description                                                                                                                                                                                                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_9__** \*          | To be used as the property name when stored and retrieved from the database. [More](/docs/fields/overview#field-names)                                                                                                                                                                                  |
+| **__PROTECTED_BLOCK_10__** \*       | Array of options to allow the field to store. Can either be an array of strings, or an array of objects containing a __PROTECTED_BLOCK_11__ string and a __PROTECTED_BLOCK_12__ string.                                                                                                                                               |
+| **__PROTECTED_BLOCK_13__**            | Text used as a field label in the Admin Panel or an object with keys for each language.                                                                                                                                                                                                                 |
+| **__PROTECTED_BLOCK_14__**         | Provide a custom validation function that will be executed on both the Admin Panel and the backend. [More](/docs/fields/overview#validation)                                                                                                                                                            |
+| **__PROTECTED_BLOCK_15__**            | Build an [index](/docs/database/overview) for this field to produce faster queries. Set this field to __PROTECTED_BLOCK_16__ if your users will perform queries on this field's data often.                                                                                                                             |
+| **__PROTECTED_BLOCK_17__**        | If this field is top-level and nested in a config supporting [Authentication](/docs/authentication/overview), include its data in the user JWT.                                                                                                                                                         |
+| **__PROTECTED_BLOCK_18__**            | Provide Field Hooks to control logic for this field. [More details](../hooks/fields).                                                                                                                                                                                                                   |
+| **__PROTECTED_BLOCK_19__**           | Provide Field Access Control to denote what users can see and do with this field's data. [More details](../access-control/fields).                                                                                                                                                                      |
+| **__PROTECTED_BLOCK_20__**           | Restrict this field's visibility from all APIs entirely. Will still be saved to the database, but will not appear in any API or the Admin Panel.                                                                                                                                                        |
+| **__PROTECTED_BLOCK_21__**     | Provide data to be used for this field's default value. The default value must exist within provided values in __PROTECTED_BLOCK_22__. [More](/docs/fields/overview#default-values)                                                                                                                                  |
+| **__PROTECTED_BLOCK_23__**        | Enable localization for this field. Requires [localization to be enabled](/docs/configuration/localization) in the Base config.                                                                                                                                                                         |
+| **__PROTECTED_BLOCK_24__**         | Require this field to have a value.                                                                                                                                                                                                                                                                     |
+| **__PROTECTED_BLOCK_25__**            | Admin-specific configuration. [More details](#admin-options).                                                                                                                                                                                                                                           |
+| **__PROTECTED_BLOCK_26__**           | Extension point for adding custom data (e.g. for plugins)                                                                                                                                                                                                                                               |
+| **__PROTECTED_BLOCK_27__**         | Custom enum name for this field when using SQL Database Adapter ([Postgres](/docs/database/postgres)). Auto-generated from name if not defined.                                                                                                                                                         |
+| **__PROTECTED_BLOCK_28__**    | Create a top level, reusable [Typescript interface](/docs/typescript/generating-types#custom-field-interfaces) & [GraphQL type](/docs/graphql/graphql-schema#custom-field-schemas).                                                                                                                     |
+| **__PROTECTED_BLOCK_29__** | Override field type generation with providing a JSON schema                                                                                                                                                                                                                                             |
+| **__PROTECTED_BLOCK_30__**          | Provide __PROTECTED_BLOCK_31__ to disable field in the database, or provide a string path to [link the field with a relationship](/docs/fields/relationship#linking-virtual-fields-with-relationships). See [Virtual Fields](__PROTECTED_BLOCK_38__) |
+
+_\* An asterisk denotes that a property is required._
+
+<Banner type="warning">
+  **Important:**
+
+Option values should be strings that do not contain hyphens or special characters due to GraphQL
+enumeration naming constraints. Underscores are allowed. If you determine you need your option
+values to be non-strings or contain special characters, they will be formatted accordingly before
+being used as a GraphQL enum.
+
+</Banner>
+
+## Admin Options [翻訳済み]
+
+To customize the appearance and behavior of the Radio Field in the [Admin Panel](../admin/overview), you can use the `admin` option:
+
+```ts
+import type { Field } from 'payload'
+
+export const MyRadioField: Field = {
+  // ...
+  admin: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+The Radio Field inherits all of the default admin options from the base [Field Admin Config](./overview#admin-options), plus the following additional options: [翻訳済み]
+
+| Property     | Description                                                                                                                  |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| **`layout`** | Allows for the radio group to be styled as a horizontally or vertically distributed list. The default value is `horizontal`. |
+
+## Example [翻訳済み]
+
+`collections/ExampleCollection.ts`
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const ExampleCollection: CollectionConfig = {
+  slug: 'example-collection',
+  fields: [
+    {
+      name: 'color', // required
+      type: 'radio', // required
+      options: [
+        // required
+        {
+          label: 'Mint',
+          value: 'mint',
+        },
+        {
+          label: 'Dark Gray',
+          value: 'dark_gray',
+        },
+      ],
+      defaultValue: 'mint', // The first value in options.
+      admin: {
+        layout: 'horizontal',
+      },
+    },
+  ],
+}
+```
+
+## Custom Components [翻訳済み]
+
+### Field [翻訳済み]
+
+#### Server Component [翻訳済み]
+
+```tsx
+import type React from 'react'
+import { RadioGroupField } from '@payloadcms/ui'
+import type { RadioFieldServerComponent } from 'payload'
+
+export const CustomRadioFieldServer: RadioFieldServerComponent = ({
+  clientField,
+  path,
+  schemaPath,
+  permissions,
+}) => {
+  return (
+    <RadioGroupField
+      field={clientField}
+      path={path}
+      schemaPath={schemaPath}
+      permissions={permissions}
+    />
+  )
+}
+```
+
+#### Client Component [翻訳済み]
+
+```tsx
+'use client'
+import React from 'react'
+import { RadioGroupField } from '@payloadcms/ui'
+import type { RadioFieldClientComponent } from 'payload'
+
+export const CustomRadioFieldClient: RadioFieldClientComponent = (props) => {
+  return <RadioGroupField {...props} />
+}
+```
+
+### Label [翻訳済み]
+
+#### Server Component [翻訳済み]
+
+```tsx
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { RadioFieldLabelServerComponent } from 'payload'
+
+export const CustomRadioFieldLabelServer: RadioFieldLabelServerComponent = ({
+  clientField,
+  path,
+  required,
+}) => {
+  return (
+    <FieldLabel
+      label={clientField?.label || clientField?.name}
+      path={path}
+      required={clientField?.required}
+    />
+  )
+}
+```
+
+#### Client Component [翻訳済み]
+
+```tsx
+'use client'
+import React from 'react'
+import { FieldLabel } from '@payloadcms/ui'
+import type { RadioFieldLabelClientComponent } from 'payload'
+
+export const CustomRadioFieldLabelClient: RadioFieldLabelClientComponent = ({
+  field,
+  path,
+}) => {
+  return (
+    <FieldLabel
+      label={field?.label || field?.name}
+      path={path}
+      required={field?.required}
+    />
+  )
+}
+```

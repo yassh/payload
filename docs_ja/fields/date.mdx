@@ -1,0 +1,123 @@
+---
+title: Date Field [翻訳済み]
+label: 日付
+order: 70
+desc: The Date field type stores a Date in the database. Learn how to use and customize the Date field, see examples and options. [翻訳済み]
+keywords: date, fields, config, configuration, documentation, Content Management System, cms, headless, javascript, node, react, nextjs [翻訳済み]
+---
+The Date Field saves a Date in the database and provides the [Admin Panel](../admin/overview) with a customizable time picker interface. [翻訳済み]
+
+<LightDarkImage
+  srcLight="__PROTECTED_BLOCK_63__
+  srcDark="__PROTECTED_BLOCK_64__
+  alt="Shows a Date field in the Payload Admin Panel"
+  caption="This field is using the __PROTECTED_BLOCK_8__ component for UI."
+/>
+
+To add a Date Field, set the __PROTECTED_BLOCK_9__ to __PROTECTED_BLOCK_10__ in your [Field Config](./overview):
+
+__PROTECTED_BLOCK_0__
+
+## Config Options
+
+| Option                 | Description                                                                                                                                                                                                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_11__** \*          | To be used as the property name when stored and retrieved from the database. [More](/docs/fields/overview#field-names)                                                                                                                                                                                  |
+| **__PROTECTED_BLOCK_12__**            | Text used as a field label in the Admin Panel or an object with keys for each language.                                                                                                                                                                                                                 |
+| **__PROTECTED_BLOCK_13__**            | Build an [index](/docs/database/overview) for this field to produce faster queries. Set this field to __PROTECTED_BLOCK_14__ if your users will perform queries on this field's data often.                                                                                                                             |
+| **__PROTECTED_BLOCK_15__**         | Provide a custom validation function that will be executed on both the Admin Panel and the backend. [More](/docs/fields/overview#validation)                                                                                                                                                            |
+| **__PROTECTED_BLOCK_16__**        | If this field is top-level and nested in a config supporting [Authentication](/docs/authentication/overview), include its data in the user JWT.                                                                                                                                                         |
+| **__PROTECTED_BLOCK_17__**            | Provide Field Hooks to control logic for this field. [More details](../hooks/fields).                                                                                                                                                                                                                   |
+| **__PROTECTED_BLOCK_18__**           | Provide Field Access Control to denote what users can see and do with this field's data. [More details](../access-control/fields).                                                                                                                                                                      |
+| **__PROTECTED_BLOCK_19__**           | Restrict this field's visibility from all APIs entirely. Will still be saved to the database, but will not appear in any API or the Admin Panel.                                                                                                                                                        |
+| **__PROTECTED_BLOCK_20__**     | Provide data to be used for this field's default value. [More](/docs/fields/overview#default-values)                                                                                                                                                                                                    |
+| **__PROTECTED_BLOCK_21__**        | Enable localization for this field. Requires [localization to be enabled](/docs/configuration/localization) in the Base config.                                                                                                                                                                         |
+| **__PROTECTED_BLOCK_22__**         | Require this field to have a value.                                                                                                                                                                                                                                                                     |
+| **__PROTECTED_BLOCK_23__**            | Admin-specific configuration. [More details](#admin-options).                                                                                                                                                                                                                                           |
+| **__PROTECTED_BLOCK_24__**           | Extension point for adding custom data (e.g. for plugins)                                                                                                                                                                                                                                               |
+| **__PROTECTED_BLOCK_25__** \*      | Set to __PROTECTED_BLOCK_26__ to enable timezone selection on this field. [More details](#timezones).                                                                                                                                                                                                                   |
+| **__PROTECTED_BLOCK_27__** | Override field type generation with providing a JSON schema                                                                                                                                                                                                                                             |
+| **__PROTECTED_BLOCK_28__**          | Provide __PROTECTED_BLOCK_29__ to disable field in the database, or provide a string path to [link the field with a relationship](/docs/fields/relationship#linking-virtual-fields-with-relationships). See [Virtual Fields](__PROTECTED_BLOCK_65__) |
+
+_\* An asterisk denotes that a property is required._
+
+## Admin Options
+
+To customize the appearance and behavior of the Date Field in the [Admin Panel](../admin/overview), you can use the __PROTECTED_BLOCK_30__ option:
+
+__PROTECTED_BLOCK_1__
+
+The Date Field inherits all of the default admin options from the base [Field Admin Config](./overview#admin-options), plus the following additional options:
+
+| Property                       | Description                                                                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_31__**              | Placeholder text for the field.                                                                                                        |
+| **__PROTECTED_BLOCK_32__**                     | Pass options to customize date field appearance.                                                                                       |
+| **__PROTECTED_BLOCK_33__**       | Format date to be shown in field **cell**.                                                                                             |
+| **__PROTECTED_BLOCK_34__** \* | Determines the appearance of the datepicker: __PROTECTED_BLOCK_35__ __PROTECTED_BLOCK_36__ __PROTECTED_BLOCK_37__ __PROTECTED_BLOCK_38__.                                            |
+| **__PROTECTED_BLOCK_39__** \*     | Number of months to display max is 2. Defaults to 1.                                                                                   |
+| **__PROTECTED_BLOCK_40__** \*          | Min date value to allow.                                                                                                               |
+| **__PROTECTED_BLOCK_41__** \*          | Max date value to allow.                                                                                                               |
+| **__PROTECTED_BLOCK_42__** \*          | Min time value to allow.                                                                                                               |
+| **__PROTECTED_BLOCK_43__** \*          | Max date value to allow.                                                                                                               |
+| **__PROTECTED_BLOCK_44__** \*        | Pass any valid props directly to the [react-datepicker](__PROTECTED_BLOCK_66__) |
+| **__PROTECTED_BLOCK_45__** \*    | Time intervals to display. Defaults to 30 minutes.                                                                                     |
+| **__PROTECTED_BLOCK_46__** \*       | Determines time format. Defaults to __PROTECTED_BLOCK_47__.                                                                                       |
+
+_\* This property is passed directly to [react-datepicker](__PROTECTED_BLOCK_67__)._
+
+### Display Format and Picker Appearance
+
+These properties only affect how the date is displayed in the UI. The full date is always stored in the format __PROTECTED_BLOCK_48__ (e.g. __PROTECTED_BLOCK_49__).
+
+__PROTECTED_BLOCK_50__ determines how the date is presented in the field **cell**, you can pass any valid [unicode date format](__PROTECTED_BLOCK_68__).
+
+__PROTECTED_BLOCK_51__ sets the appearance of the **react datepicker**, the options available are __PROTECTED_BLOCK_52__, __PROTECTED_BLOCK_53__, __PROTECTED_BLOCK_54__, and __PROTECTED_BLOCK_55__. By default, the datepicker will display __PROTECTED_BLOCK_56__.
+
+When only __PROTECTED_BLOCK_57__ is set, an equivalent format will be rendered in the date field cell. To overwrite this format, set __PROTECTED_BLOCK_58__.
+
+## Example
+
+__PROTECTED_BLOCK_59__
+
+__PROTECTED_BLOCK_2__
+
+## Custom Components
+
+### Field
+
+#### Server Component
+
+__PROTECTED_BLOCK_3__
+
+#### Client Component
+
+__PROTECTED_BLOCK_4__
+
+### Label
+
+#### Server Component
+
+__PROTECTED_BLOCK_5__
+
+#### Client Component
+
+__PROTECTED_BLOCK_6__
+
+## Timezones
+
+To enable timezone selection on a Date field, set the __PROTECTED_BLOCK_60__ property to __PROTECTED_BLOCK_61__:
+
+__PROTECTED_BLOCK_7__
+
+This will add a dropdown to the date picker that allows users to select a timezone. The selected timezone will be saved in the database along with the date in a new column named __PROTECTED_BLOCK_62__.
+
+You can customise the available list of timezones in the [global admin config](../admin/overview#timezones).
+
+<Banner type="info">
+  **Good to know:**
+  The date itself will be stored in UTC so it's up to you to handle the conversion to the user's timezone when displaying the date in your frontend.
+
+Dates without a specific time are normalised to 12:00 in the selected timezone.
+
+</Banner>

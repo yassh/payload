@@ -1,0 +1,875 @@
+---
+title: React フック
+label: React フック
+order: 50
+desc: Make use of all of the powerful React hooks that Payload provides.
+keywords: admin, components, custom, documentation, Content Management System, cms, headless, javascript, node, react, nextjs [翻訳済み]
+---
+
+Payload provides a variety of powerful [React Hooks](https://react.dev/reference/react-dom/hooks) that can be used within your own [Custom Components](../custom-components/overview), such as [Custom Fields](../fields/overview#custom-components). With them, you can interface with Payload itself to build just about any type of complex customization you can think of.
+
+<Banner type="warning">
+  **Reminder:** All Custom Components are [React Server
+  Components](__PROTECTED_BLOCK_246__) by default.
+  Hooks, on the other hand, are only available in client-side environments. To
+  use hooks, [ensure your component is a client
+  component](../custom-components/overview#client-components).
+</Banner>
+
+## useField [翻訳済み]
+
+The `useField` hook is used internally within all field components. It manages sending and receiving a field's state from its parent form. When you build a [Custom Field Component](../fields/overview#custom-components), you will be responsible for sending and receiving the field's `value` to and from the form yourself.
+
+To do so, import the `useField` hook as follows:
+
+```tsx
+'use client'
+import type { TextFieldClientComponent } from 'payload'
+import { useField } from '@payloadcms/ui'
+
+export const CustomTextField: TextFieldClientComponent = ({ path }) => {
+  const { value, setValue } = useField({ path }) // highlight-line
+
+  return (
+    <div>
+      <p>{path}</p>
+      <input
+        onChange={(e) => {
+          setValue(e.target.value)
+        }}
+        value={value}
+      />
+    </div>
+  )
+}
+```
+
+The `useField` hook accepts the following arguments:
+
+| Property          | Description                                                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `path`            | If you do not provide a `path`, `name` will be used instead. This is the path to the field in the form data.                                                                                     |
+| `validate`        | A validation function executed client-side _before_ submitting the form to the server. Different than [Field-level Validation](../fields/overview#validation) which runs strictly on the server. |
+| `disableFormData` | If `true`, the field will not be included in the form data when the form is submitted.                                                                                                           |
+| `hasRows`         | If `true`, the field will be treated as a field with rows. This is useful for fields like `array` and `blocks`.                                                                                  |
+
+The `useField` hook returns the following object:
+
+```ts
+type FieldType<T> = {
+  errorMessage?: string
+  errorPaths?: string[]
+  filterOptions?: FilterOptionsResult
+  formInitializing: boolean
+  formProcessing: boolean
+  formSubmitted: boolean
+  initialValue?: T
+  path: string
+  permissions: FieldPermissions
+  readOnly?: boolean
+  rows?: Row[]
+  schemaPath: string
+  setValue: (val: unknown, disableModifyingForm?: boolean) => void
+  showError: boolean
+  valid?: boolean
+  value: T
+}
+```
+
+## useFormFields [翻訳済み]
+
+There are times when a custom field component needs to have access to data from other fields, and you have a few options to do so. The `useFormFields` hook is a powerful and highly performant way to retrieve a form's field state, as well as to retrieve the `dispatchFields` method, which can be helpful for setting other fields' form states from anywhere within a form.
+
+<Banner type="success">
+  **This hook is great for retrieving only certain fields from form state**
+  because it ensures that it will only cause a rerender when the items that you
+  ask for change.
+</Banner>
+
+Thanks to the awesome package [`use-context-selector`](https://github.com/dai-shi/use-context-selector), you can retrieve a specific field's state easily. This is ideal because you can ensure you have an up-to-date field state, and your component will only re-render when _that field's state_ changes.
+
+You can pass a Redux-like selector into the hook, which will ensure that you retrieve only the field that you want. The selector takes an argument with type of `[fields: Fields, dispatch: React.Dispatch<Action>]]`.
+
+```tsx
+'use client'
+import { useFormFields } from '@payloadcms/ui'
+
+const MyComponent: React.FC = () => {
+  // Get only the `amount` field state, and only cause a rerender when that field changes
+  const amount = useFormFields(([fields, dispatch]) => fields.amount)
+
+  // Do the same thing as above, but to the `feePercentage` field
+  const feePercentage = useFormFields(
+    ([fields, dispatch]) => fields.feePercentage,
+  )
+
+  if (
+    typeof amount?.value !== 'undefined' &&
+    typeof feePercentage?.value !== 'undefined'
+  ) {
+    return <span>The fee is ${(amount.value * feePercentage.value) / 100}</span>
+  }
+}
+```
+
+## useAllFormFields [翻訳済み]
+
+**To retrieve more than one field**, you can use the `useAllFormFields` hook. Your component will re-render when _any_ field changes, so use this hook only if you absolutely need to. Unlike the `useFormFields` hook, this hook does not accept a "selector", and it always returns an array with type of `[fields: Fields, dispatch: React.Dispatch<Action>]]`.
+
+You can do lots of powerful stuff by retrieving the full form state, like using built-in helper functions to reduce field state to values only, or to retrieve sibling data by path. [翻訳済み]
+
+```tsx
+'use client'
+import { useAllFormFields } from '@payloadcms/ui'
+import { reduceFieldsToValues, getSiblingData } from 'payload/shared'
+
+const ExampleComponent: React.FC = () => {
+  // the `fields` const will be equal to all fields' state,
+  // and the `dispatchFields` method is usable to send field state up to the form
+  const [fields, dispatchFields] = useAllFormFields();
+
+  // Pass in fields, and indicate if you'd like to "unflatten" field data.
+  // The result below will reflect the data stored in the form at the given time
+  const formData = reduceFieldsToValues(fields, true);
+
+  // Pass in field state and a path,
+  // and you will be sent all sibling data of the path that you've specified
+  const siblingData = getSiblingData(fields, 'someFieldName');
+
+  return (
+    // return some JSX here if necessary
+  )
+};
+```
+
+#### Updating other fields' values [翻訳済み]
+
+If you are building a Custom Component, then you should use `setValue` which is returned from the `useField` hook to programmatically set your field's value. But if you're looking to update _another_ field's value, you can use `dispatchFields` returned from `useAllFormFields`.
+
+You can send the following actions to the `dispatchFields` function.
+
+| Action                 | Description                                                                |
+| ---------------------- | -------------------------------------------------------------------------- |
+| **`ADD_ROW`**          | Adds a row of data (useful in array / block field data)                    |
+| **`DUPLICATE_ROW`**    | Duplicates a row of data (useful in array / block field data)              |
+| **`MODIFY_CONDITION`** | Updates a field's conditional logic result (true / false)                  |
+| **`MOVE_ROW`**         | Moves a row of data (useful in array / block field data)                   |
+| **`REMOVE`**           | Removes a field from form state                                            |
+| **`REMOVE_ROW`**       | Removes a row of data from form state (useful in array / block field data) |
+| **`REPLACE_STATE`**    | Completely replaces form state                                             |
+| **`UPDATE`**           | Update any property of a specific field's state                            |
+
+To see types for each action supported within the `dispatchFields` hook, check out the Form types [here](https://github.com/payloadcms/payload/blob/main/packages/ui/src/forms/Form/types.ts).
+
+## useForm [翻訳済み]
+
+The `useForm` hook can be used to interact with the form itself, and sends back many methods that can be used to reactively fetch form state without causing rerenders within your components each time a field is changed. This is useful if you have action-based callbacks that your components fire, and need to interact with form state _based on a user action_.
+
+<Banner type="warning">
+  **Warning:**
+
+This hook is optimized to avoid causing rerenders when fields change, and as such, its __PROTECTED_BLOCK_59__
+property will be out of date. You should only leverage this hook if you need to perform actions
+against the form in response to your users' actions. Do not rely on its returned "fields" as being
+up-to-date. They will be removed from this hook's response in an upcoming version.
+
+</Banner>
+
+The `useForm` hook returns an object with the following properties:
+
+<TableWithDrawers
+  columns={[
+    'Action',
+    'Description',
+    'Example',
+  ]}
+  rows={[
+    [
+      {
+        value: "**__PROTECTED_BLOCK_61__**",
+      },
+      {
+        value: "Deprecated. This property cannot be relied on as up-to-date.",
+      },
+      {
+        value: ''
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_62__**",
+      },
+      {
+        value: "Method to trigger the form to submit",
+      },
+      {
+        value: ''
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_63__**",
+      },
+      {
+        value: "Dispatch actions to the form field state",
+      },
+      {
+        value: ''
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_64__**",
+      },
+      {
+        value: "Trigger a validation of the form state",
+      },
+      {
+        value: ''
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_65__**",
+      },
+      {
+        value: "Create a __PROTECTED_BLOCK_66__ object from the current form's state",
+      },
+      {
+        value: ''
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_67__**",
+      },
+      {
+        value: "Boolean denoting whether or not the form is disabled",
+      },
+      {
+        value: ''
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_68__**",
+      },
+      {
+        value: 'Gets all fields from state',
+      },
+      {
+        value: '',
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_69__**",
+      },
+      {
+        value: 'Gets a single field from state by path',
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_70__**",
+      },
+      {
+        value: 'Returns the data stored in the form',
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_71__**",
+      },
+      {
+        value: 'Returns form sibling data for the given field path',
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_72__**",
+      },
+      {
+        value: "Set the form\'s __PROTECTED_BLOCK_73__ state",
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_74__**",
+      },
+      {
+        value: "Set the form\'s __PROTECTED_BLOCK_75__ state",
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_76__**",
+      },
+      {
+        value: "Set the form\'s __PROTECTED_BLOCK_77__ state",
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_78__**",
+      },
+      {
+        value: 'The ref from the form HTML element',
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_79__**",
+      },
+      {
+        value: 'Method to reset the form to its initial state',
+      },
+      {
+        value: '',
+      },
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_80__**",
+      },
+      {
+        value: "Method to add a row on an array or block field",
+      },
+      {
+        drawerTitle: 'addFieldRow',
+        drawerDescription: 'A useful method to programmatically add a row to an array or block field.',
+        drawerSlug: 'addFieldRow',
+        drawerContent: __PROTECTED_BLOCK_81__path\\\__PROTECTED_BLOCK_82__rowIndex\\\__PROTECTED_BLOCK_83__data\\\__PROTECTED_BLOCK_84__\__PROTECTED_BLOCK_85__tsx
+import { useForm } from "@payloadcms/ui"
+
+export const CustomArrayManager = () => {
+  const { addFieldRow } = useForm()
+
+return (
+
+<button
+  type="button"
+  onClick={() => {
+    addFieldRow({
+      path: 'arrayField',
+      schemaPath: 'arrayField',
+      rowIndex: 0, // optionally specify the index to add the row at
+      subFieldState: {
+        textField: {
+          initialValue: 'New row text',
+          valid: true,
+          value: 'New row text',
+        },
+      },
+      // blockType: "yourBlockSlug",
+      // ^ if managing a block array, you need to specify the block type
+    })
+  }}
+>
+  Add Row
+</button>
+) } \__PROTECTED_BLOCK_86__\__PROTECTED_BLOCK_87__\__PROTECTED_BLOCK_88__tsx
+const ExampleCollection = {
+slug: "example-collection",
+fields: [
+{
+name: "arrayField",
+type: "array",
+fields: [
+{
+name: "textField",
+type: "text",
+},
+],
+},
+{
+type: "ui",
+name: "customArrayManager",
+admin: {
+components: {
+Field: '/path/to/CustomArrayManagerField',
+},
+},
+},
+],
+}
+\__PROTECTED_BLOCK_89__\__PROTECTED_BLOCK_90__
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_91__**",
+      },
+      {
+        value: "Method to remove a row from an array or block field",
+      },
+      {
+        drawerTitle: 'removeFieldRow',
+        drawerDescription: 'A useful method to programmatically remove a row from an array or block field.',
+        drawerSlug: 'removeFieldRow',
+        drawerContent:  __PROTECTED_BLOCK_92__path\\\__PROTECTED_BLOCK_93__rowIndex\\\__PROTECTED_BLOCK_94__\__PROTECTED_BLOCK_95__tsx
+import { useForm } from "@payloadcms/ui"
+
+export const CustomArrayManager = () => {
+  const { removeFieldRow } = useForm()
+
+return (
+
+<button
+  type="button"
+  onClick={() => {
+    removeFieldRow({
+      path: 'arrayField',
+      rowIndex: 0,
+    })
+  }}
+>
+  Remove Row
+</button>
+) } \__PROTECTED_BLOCK_96__\__PROTECTED_BLOCK_97__\__PROTECTED_BLOCK_98__tsx
+const ExampleCollection = {
+slug: "example-collection",
+fields: [
+{
+name: "arrayField",
+type: "array",
+fields: [
+{
+name: "textField",
+type: "text",
+},
+],
+},
+{
+type: "ui",
+name: "customArrayManager",
+admin: {
+components: {
+Field: '/path/to/CustomArrayManagerField',
+},
+},
+},
+],
+}
+\__PROTECTED_BLOCK_99__\__PROTECTED_BLOCK_100__
+      }
+    ],
+    [
+      {
+        value: "**__PROTECTED_BLOCK_101__**",
+      },
+      {
+        value: "Method to replace a row from an array or block field",
+      },
+      {
+        drawerTitle: 'replaceFieldRow',
+        drawerDescription: 'A useful method to programmatically replace a row from an array or block field.',
+        drawerSlug: 'replaceFieldRow',
+        drawerContent:  __PROTECTED_BLOCK_102__path\\\__PROTECTED_BLOCK_103__rowIndex\\\__PROTECTED_BLOCK_104__data\\\__PROTECTED_BLOCK_105__\__PROTECTED_BLOCK_106__tsx
+import { useForm } from "@payloadcms/ui"
+
+export const CustomArrayManager = () => {
+  const { replaceFieldRow } = useForm()
+
+return (
+
+<button
+  type="button"
+  onClick={() => {
+    replaceFieldRow({
+      path: 'arrayField',
+      schemaPath: 'arrayField',
+      rowIndex: 0, // optionally specify the index to add the row at
+      subFieldState: {
+        textField: {
+          initialValue: 'Updated text',
+          valid: true,
+          value: 'Updated text',
+        },
+      },
+      // blockType: "yourBlockSlug",
+      // ^ if managing a block array, you need to specify the block type
+    })
+  }}
+>
+  Replace Row
+</button>
+) } \__PROTECTED_BLOCK_107__\__PROTECTED_BLOCK_108__\__PROTECTED_BLOCK_109__tsx
+const ExampleCollection = {
+slug: "example-collection",
+fields: [
+{
+name: "arrayField",
+type: "array",
+fields: [
+{
+name: "textField",
+type: "text",
+},
+],
+},
+{
+type: "ui",
+name: "customArrayManager",
+admin: {
+components: {
+Field: '/path/to/CustomArrayManagerField',
+},
+},
+},
+],
+}
+\__PROTECTED_BLOCK_110__\__PROTECTED_BLOCK_111__
+}
+],
+]}
+/>
+
+## useDocumentForm
+
+The __PROTECTED_BLOCK_112__ hook works the same way as the [useForm](#useform) hook, but it always gives you access to the top-level __PROTECTED_BLOCK_113__ of a document. This is useful if you need to access the document's __PROTECTED_BLOCK_114__ context from within a child __PROTECTED_BLOCK_115__.
+
+An example where this could happen would be custom components within lexical blocks, as lexical blocks initialize their own child __PROTECTED_BLOCK_116__.
+
+__PROTECTED_BLOCK_4__
+
+## useCollapsible
+
+The __PROTECTED_BLOCK_117__ hook allows you to control parent collapsibles:
+
+| Property                  | Description                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_118__**         | State of the collapsible. __PROTECTED_BLOCK_119__ if open, __PROTECTED_BLOCK_120__ if collapsed.                                               |
+| **__PROTECTED_BLOCK_121__**           | If nested, determine if the nearest collapsible is visible. __PROTECTED_BLOCK_122__ if no parent is closed, __PROTECTED_BLOCK_123__ otherwise. |
+| **__PROTECTED_BLOCK_124__**              | Toggles the state of the nearest collapsible.                                                                 |
+| **__PROTECTED_BLOCK_125__** | Determine when you are within another collapsible.                                                            |
+
+**Example:**
+
+__PROTECTED_BLOCK_5__
+
+## useDocumentInfo
+
+The __PROTECTED_BLOCK_126__ hook provides information about the current document being edited, including the following:
+
+| Property                           | Description                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **__PROTECTED_BLOCK_127__**                       | The URL attached to the action attribute on the underlying form element, which specifies where to send the form data when the form is submitted. |
+| **__PROTECTED_BLOCK_128__**                       | The API URL for the current document.                                                                                                            |
+| **__PROTECTED_BLOCK_129__**               | The slug of the collection if editing a collection document.                                                                                     |
+| **__PROTECTED_BLOCK_130__**                | The user currently editing the document.                                                                                                         |
+| **__PROTECTED_BLOCK_131__**                    | Either the Collection or Global config of the document, depending on what is being edited.                                                       |
+| **__PROTECTED_BLOCK_132__**               | The current document's permissions. Fallback to collection permissions when no id is present.                                                    |
+| **__PROTECTED_BLOCK_133__**             | Whether the document is currently locked by another user. [More details](./locked-documents).                                                    |
+| **__PROTECTED_BLOCK_134__**            | Method to retrieve document-level permissions.                                                                                                   |
+| **__PROTECTED_BLOCK_135__**            | Method to retrieve document-level user preferences. [More details](./preferences).                                                               |
+| **__PROTECTED_BLOCK_136__**                   | The slug of the global if editing a global document.                                                                                             |
+| **__PROTECTED_BLOCK_137__**              | Whether the document has a published version.                                                                                                    |
+| **__PROTECTED_BLOCK_138__**         | Whether the current user has permission to publish the document.                                                                                 |
+| **__PROTECTED_BLOCK_139__**            | Whether the current user has permission to save the document.                                                                                    |
+| **__PROTECTED_BLOCK_140__**                           | If the doc is a collection, its ID will be returned.                                                                                             |
+| **__PROTECTED_BLOCK_141__**        | Method to increment the version count of the document.                                                                                           |
+| **__PROTECTED_BLOCK_142__**                  | The initial data of the document.                                                                                                                |
+| **__PROTECTED_BLOCK_143__**                    | Whether the document is being edited (as opposed to created).                                                                                    |
+| **__PROTECTED_BLOCK_144__**               | Whether the document info is still initializing.                                                                                                 |
+| **__PROTECTED_BLOCK_145__**                     | Whether the document is locked. [More details](./locked-documents).                                                                              |
+| **__PROTECTED_BLOCK_146__**               | Timestamp of the last update to the document.                                                                                                    |
+| **__PROTECTED_BLOCK_147__** | Whether the most recent version is an autosaved version.                                                                                         |
+| **__PROTECTED_BLOCK_148__**               | The __PROTECTED_BLOCK_149__ key to use when interacting with document-level user preferences. [More details](./preferences).                               |
+| **__PROTECTED_BLOCK_150__**            | The saved data of the document.                                                                                                                  |
+| **__PROTECTED_BLOCK_151__**       | Method to set preferences for a specific field. [More details](./preferences).                                                                   |
+| **__PROTECTED_BLOCK_152__**             | Method to set the document title.                                                                                                                |
+| **__PROTECTED_BLOCK_153__**           | Method to update whether the document has been published.                                                                                        |
+| **__PROTECTED_BLOCK_154__**                        | The title of the document.                                                                                                                       |
+| **__PROTECTED_BLOCK_155__**               | Method to unlock a document. [More details](./locked-documents).                                                                                 |
+| **__PROTECTED_BLOCK_156__**      | The number of unpublished versions of the document.                                                                                              |
+| **__PROTECTED_BLOCK_157__**         | Method to update who is currently editing the document. [More details](./locked-documents).                                                      |
+| **__PROTECTED_BLOCK_158__**      | Method to update the saved document data.                                                                                                        |
+| **__PROTECTED_BLOCK_159__**                 | Status of any uploads in progress ('idle', 'uploading', or 'failed').                                                                            |
+| **__PROTECTED_BLOCK_160__**                 | The current version count of the document.                                                                                                       |
+
+**Example:**
+
+__PROTECTED_BLOCK_6__
+
+## useListQuery
+
+The __PROTECTED_BLOCK_161__ hook is used to subscribe to the data, current query, and other properties used within the List View. You can use this hook within any Custom Component rendered within the List View.
+
+__PROTECTED_BLOCK_7__
+
+The __PROTECTED_BLOCK_162__ hook returns an object with the following properties:
+
+| Property                  | Description                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_163__**                | The data that is being displayed in the List View.                                     |
+| **__PROTECTED_BLOCK_164__**        | The default limit of items to display in the List View.                                |
+| **__PROTECTED_BLOCK_165__**         | The default sort order of items in the List View.                                      |
+| **__PROTECTED_BLOCK_166__**    | A method to handle page changes in the List View.                                      |
+| **__PROTECTED_BLOCK_167__** | A method to handle per page changes in the List View.                                  |
+| **__PROTECTED_BLOCK_168__**  | A method to handle search changes in the List View.                                    |
+| **__PROTECTED_BLOCK_169__**    | A method to handle sort changes in the List View.                                      |
+| **__PROTECTED_BLOCK_170__**   | A method to handle where changes in the List View.                                     |
+| **__PROTECTED_BLOCK_171__**            | Whether the query has been changed from its [Query Preset](../query-presets/overview). |
+| **__PROTECTED_BLOCK_172__**               | The current query that is being used to fetch the data in the List View.               |
+
+## useSelection
+
+The __PROTECTED_BLOCK_173__ hook provides information on the selected rows in the List view as well as helper methods to simplify selection. The __PROTECTED_BLOCK_174__ hook returns an object with the following properties:
+
+| Property             | Description                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_175__**          | The number of currently selected rows.                                                                                                                                    |
+| **__PROTECTED_BLOCK_176__** | A function that generates a query string based on the current selection state and optional additional filtering parameters.                                               |
+| **__PROTECTED_BLOCK_177__**      | An enum value representing the selection range: __PROTECTED_BLOCK_178__, __PROTECTED_BLOCK_179__, __PROTECTED_BLOCK_180__, and __PROTECTED_BLOCK_181__. The enum, __PROTECTED_BLOCK_182__, is exported for easier comparisons. |
+| **__PROTECTED_BLOCK_183__**       | A map of document id keys and boolean values representing their selection status.                                                                                         |
+| **__PROTECTED_BLOCK_184__**   | A function that toggles the selection status of a document row.                                                                                                           |
+| **__PROTECTED_BLOCK_185__**      | A function that toggles selection for all documents on the current page or selects all available documents when passed __PROTECTED_BLOCK_186__.                                            |
+| **__PROTECTED_BLOCK_187__**      | The number of total documents in the collection.                                                                                                                          |
+
+**Example:**
+
+__PROTECTED_BLOCK_8__
+
+## useLocale
+
+In any Custom Component you can get the selected locale object with the __PROTECTED_BLOCK_188__ hook. __PROTECTED_BLOCK_189__ gives you the full locale object, consisting of a __PROTECTED_BLOCK_190__, __PROTECTED_BLOCK_191__(right-to-left) property, and then __PROTECTED_BLOCK_192__. Here is a simple example:
+
+__PROTECTED_BLOCK_9__
+
+## useAuth
+
+Useful to retrieve info about the currently logged in user as well as methods for interacting with it. It sends back an object with the following properties:
+
+| Property                 | Description                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_193__**               | The currently logged in user                                                            |
+| **__PROTECTED_BLOCK_194__**             | A method to log out the currently logged in user                                        |
+| **__PROTECTED_BLOCK_195__**      | A method to trigger the silent refreshing of a user's auth token                        |
+| **__PROTECTED_BLOCK_196__**           | Set the token of the user, to be decoded and used to reset the user and token in memory |
+| **__PROTECTED_BLOCK_197__**              | The logged in user's token (useful for creating preview links, etc.)                    |
+| **__PROTECTED_BLOCK_198__** | Load new permissions (useful when content that affects permissions has been changed)    |
+| **__PROTECTED_BLOCK_199__**        | The permissions of the current user                                                     |
+
+__PROTECTED_BLOCK_10__
+
+## useConfig
+
+Used to retrieve the Payload [Client Config](../custom-components/overview#accessing-the-payload-config).
+
+__PROTECTED_BLOCK_11__
+
+If you need to retrieve a specific collection or global config by its slug, __PROTECTED_BLOCK_200__ is the most efficient way to do so:
+
+__PROTECTED_BLOCK_12__
+
+## useEditDepth
+
+Sends back how many editing levels "deep" the current component is. Edit depth is relevant while adding new documents / editing documents in modal windows and other cases.
+
+__PROTECTED_BLOCK_13__
+
+## usePreferences
+
+Returns methods to set and get user preferences. More info can be found [here](__PROTECTED_BLOCK_249__).
+
+## useTheme
+
+Returns the currently selected theme (__PROTECTED_BLOCK_201__, __PROTECTED_BLOCK_202__ or __PROTECTED_BLOCK_203__), a set function to update it and a boolean __PROTECTED_BLOCK_204__, used to determine if the theme value should be set automatically based on the user's device preferences.
+
+__PROTECTED_BLOCK_14__
+
+## useTableColumns
+
+Returns properties and methods to manipulate table columns:
+| Property | Description |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| **__PROTECTED_BLOCK_205__** | The current state of columns including their active status and configuration |
+| **__PROTECTED_BLOCK_206__** | A component override for linked cells in the table |
+| **__PROTECTED_BLOCK_207__** | A method to reorder columns. Accepts __PROTECTED_BLOCK_208__ as arguments |
+| **__PROTECTED_BLOCK_209__** | A method to reset columns back to their default configuration as defined in the collection config |
+| **__PROTECTED_BLOCK_210__** | A method to set specific columns to active state while preserving the existing column order. Accepts an array of column names to activate |
+| **__PROTECTED_BLOCK_211__** | A method to toggle a single column's visibility. Accepts a column name as string |
+
+__PROTECTED_BLOCK_15__
+
+## useDocumentEvents
+
+The __PROTECTED_BLOCK_212__ hook provides a way of subscribing to cross-document events, such as updates made to nested documents within a drawer. This hook will report document events that are outside the scope of the document currently being edited. This hook provides the following:
+
+| Property               | Description                                                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **__PROTECTED_BLOCK_213__** | An object containing the most recently updated document. It contains the __PROTECTED_BLOCK_214__, __PROTECTED_BLOCK_215__ (if collection), and __PROTECTED_BLOCK_216__ properties |
+| **__PROTECTED_BLOCK_217__**     | A method used to report updates to documents. It accepts the same arguments as the __PROTECTED_BLOCK_218__ property.                         |
+
+**Example:**
+
+__PROTECTED_BLOCK_16__
+
+<Banner type="info">
+  Right now the __PROTECTED_BLOCK_219__ hook only tracks recently updated documents,
+  but in the future it will track more document-related events as needed, such
+  as document creation, deletion, etc.
+</Banner>
+
+## useStepNav [翻訳済み]
+
+The `useStepNav` hook provides a way to change the step-nav breadcrumb links in the app header.
+
+| Property         | Description                                                                      |
+| ---------------- | -------------------------------------------------------------------------------- |
+| **`setStepNav`** | A state setter function which sets the `stepNav` array.                          |
+| **`stepNav`**    | A `StepNavItem` array where each `StepNavItem` has a label and optionally a url. |
+
+**Example:** [翻訳済み]
+
+```tsx
+'use client'
+import { type StepNavItem, useStepNav } from '@payloadcms/ui'
+import { useEffect } from 'react'
+
+export const MySetStepNavComponent: React.FC<{
+  nav: StepNavItem[]
+}> = ({ nav }) => {
+  const { setStepNav } = useStepNav()
+
+  useEffect(() => {
+    setStepNav(nav)
+  }, [setStepNav, nav])
+
+  return null
+}
+```
+
+## usePayloadAPI
+
+The `usePayloadAPI` hook is a useful tool for making REST API requests to your Payload instance and handling responses reactively. It allows you to fetch and interact with data while automatically updating when parameters change.
+
+This hook returns an array with two elements: [翻訳済み]
+
+1. An object containing the API response.
+2. A set of methods to modify request parameters. [翻訳済み]
+
+**Example:** [翻訳済み]
+
+```tsx
+'use client'
+import { usePayloadAPI } from '@payloadcms/ui'
+
+const MyComponent: React.FC = () => {
+  // Fetch data from a collection item using its ID
+  const [{ data, isError, isLoading }, { setParams }] = usePayloadAPI(
+    '/api/posts/123',
+    {
+      initialParams: { depth: 1 },
+    },
+  )
+
+  if (isLoading) return <p>Loading...</p>
+  if (isError) return <p>Error occurred while fetching data.</p>
+
+  return (
+    <div>
+      <h1>{data?.title}</h1>
+      <button onClick={() => setParams({ cacheBust: Date.now() })}>
+        Refresh Data
+      </button>
+    </div>
+  )
+}
+```
+
+**Arguments:** [翻訳済み]
+
+| Property      | Description                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| **`url`**     | The API endpoint to fetch data from. Relative URLs will be prefixed with the Payload API route. |
+| **`options`** | An object containing initial request parameters and initial state configuration.                |
+
+The `options` argument accepts the following properties:
+
+| Property            | Description                                                                                         |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| **`initialData`**   | Uses this data instead of making an initial request. If not provided, the request runs immediately. |
+| **`initialParams`** | Defines the initial parameters to use in the request. Defaults to an empty object `{}`.             |
+
+**Returned Value:** [翻訳済み]
+
+The first item in the returned array is an object containing the following properties: [翻訳済み]
+
+| Property        | Description                                              |
+| --------------- | -------------------------------------------------------- |
+| **`data`**      | The API response data.                                   |
+| **`isError`**   | A boolean indicating whether the request failed.         |
+| **`isLoading`** | A boolean indicating whether the request is in progress. |
+
+The second item is an object with the following methods: [翻訳済み]
+
+| Property        | Description                                                 |
+| --------------- | ----------------------------------------------------------- |
+| **`setParams`** | Updates request parameters, triggering a refetch if needed. |
+
+#### Updating Data [翻訳済み]
+
+The `setParams` function can be used to update the request and trigger a refetch:
+
+```tsx
+setParams({ depth: 2 })
+```
+
+This is useful for scenarios where you need to trigger another fetch regardless of the `url` argument changing.
+
+## useRouteTransition [翻訳済み]
+
+Route transitions are useful in showing immediate visual feedback to the user when navigating between pages. This is especially useful on slow networks when navigating to data heavy or process intensive pages. [翻訳済み]
+
+By default, any instances of `Link` from `@payloadcms/ui` will trigger route transitions by default.
+
+```tsx
+import { Link } from '@payloadcms/ui'
+
+const MyComponent = () => {
+  return <Link href="/somewhere">Go Somewhere</Link>
+}
+```
+
+You can also trigger route transitions programmatically, such as when using `router.push` from `next/router`. To do this, wrap your function calls with the `startRouteTransition` method provided by the `useRouteTransition` hook.
+
+```ts
+'use client'
+import React, { useCallback } from 'react'
+import { useTransition } from '@payloadcms/ui'
+import { useRouter } from 'next/navigation'
+
+const MyComponent: React.FC = () => {
+  const router = useRouter()
+  const { startRouteTransition } = useRouteTransition()
+
+  const redirectSomewhere = useCallback(() => {
+    startRouteTransition(() => router.push('/somewhere'))
+  }, [startRouteTransition, router])
+
+  // ...
+}
+```

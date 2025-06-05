@@ -1,0 +1,152 @@
+---
+title: Sentry Plugin [翻訳済み]
+label: Sentry
+order: 40
+desc: Integrate Sentry error tracking into your Payload application
+keywords: plugins, sentry, error, tracking, monitoring, logging, bug, reporting, performance [翻訳済み]
+---
+
+![https://www.npmjs.com/package/@payloadcms/plugin-sentry](https://img.shields.io/npm/v/@payloadcms/plugin-sentry)
+
+This plugin allows you to integrate [Sentry](https://sentry.io/) seamlessly with your [Payload](https://github.com/payloadcms/payload) application.
+
+## What is Sentry? [翻訳済み]
+
+Sentry is a powerful error tracking and performance monitoring tool that helps developers identify, diagnose, and resolve issues in their applications. [翻訳済み]
+
+<Banner type="success">
+  Sentry does smart stuff with error data to make bugs easier to find and fix. -
+  [sentry.io](__PROTECTED_BLOCK_17__)
+</Banner>
+
+This multi-faceted software offers a range of features that will help you manage errors with greater ease and ultimately ensure your application is running smoothly: [翻訳済み]
+
+## Core Features [翻訳済み]
+
+- **Error Tracking**: Instantly captures and logs errors as they occur in your application
+- **Performance Monitoring**: Tracks application performance to identify slowdowns and bottlenecks
+- **Detailed Reports**: Provides comprehensive insights into errors, including stack traces and context
+- **Alerts and Notifications**: Send and customize event-triggered notifications
+- **Issue Grouping, Filtering and Search**: Automatically groups similar errors, and allows filtering and searching issues by custom criteria
+- **Breadcrumbs**: Records user actions and events leading up to an error
+- **Integrations**: Connects with various tools and services for enhanced workflow and issue management [翻訳済み]
+
+<Banner type="info">
+  This plugin is completely open-source and the [source code can be found
+  here](__PROTECTED_BLOCK_18__).
+  If you need help, check out our [Community
+  Help](__PROTECTED_BLOCK_19__). If you think you've found a bug,
+  please [open a new
+  issue](__PROTECTED_BLOCK_20__)
+  with as much detail as possible.
+</Banner>
+
+## Installation [翻訳済み]
+
+Install the plugin using any JavaScript package manager like [pnpm](https://pnpm.io), [npm](https://npmjs.com), or [Yarn](https://yarnpkg.com):
+
+```bash
+  pnpm add @payloadcms/plugin-sentry
+```
+
+## Sentry for Next.js setup
+
+This plugin requires to complete the [Sentry + Next.js setup](https://docs.sentry.io/platforms/javascript/guides/nextjs/) before.
+
+You can use either the [automatic setup](https://docs.sentry.io/platforms/javascript/guides/nextjs/#install) with the installation wizard:
+
+```sh
+npx @sentry/wizard@latest -i nextjs
+```
+
+Or the [Manual Setup](https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/)
+
+## Basic Usage [翻訳済み]
+
+In the `plugins` array of your [Payload Config](https://payloadcms.com/docs/configuration/overview), call the plugin and pass in your Sentry DSN as an option.
+
+```ts
+import { buildConfig } from 'payload'
+import { sentryPlugin } from '@payloadcms/plugin-sentry'
+import { Pages, Media } from './collections'
+
+import * as Sentry from '@sentry/nextjs'
+
+const config = buildConfig({
+  collections: [Pages, Media],
+  plugins: [
+    sentryPlugin({
+      Sentry,
+    }),
+  ],
+})
+
+export default config
+```
+
+## Options [翻訳済み]
+
+- `Sentry` : Sentry | **required**
+
+  The `Sentry` instance
+
+<Banner type="warning">
+  Make sure to complete the [Sentry for Next.js Setup](#sentry-for-nextjs-setup)
+  before.
+</Banner>
+
+- `enabled`: boolean | optional
+
+  Set to false to disable the plugin. Defaults to `true`.
+
+- `context`: `(args: ContextArgs) => Partial<ScopeContext> | Promise<Partial<ScopeContext>>`
+
+  Pass additional [contextual data](https://docs.sentry.io/platforms/javascript/enriching-events/context/#passing-context-directly) to Sentry
+
+- `captureErrors`: number[] | optional
+
+  By default, `Sentry.errorHandler` will capture only errors with a status code of 500 or higher. To capture additional error codes, pass the values as numbers in an array.
+
+### Example [翻訳済み]
+
+Configure any of these options by passing them to the plugin: [翻訳済み]
+
+```ts
+import { buildConfig } from 'payload'
+import { sentryPlugin } from '@payloadcms/plugin-sentry'
+
+import * as Sentry from '@sentry/nextjs'
+
+import { Pages, Media } from './collections'
+
+const config = buildConfig({
+  collections: [Pages, Media],
+  plugins: [
+    sentryPlugin({
+      options: {
+        captureErrors: [400, 403],
+        context: ({ defaultContext, req }) => {
+          return {
+            ...defaultContext,
+            tags: {
+              locale: req.locale,
+            },
+          }
+        },
+        debug: true,
+      },
+      Sentry,
+    }),
+  ],
+})
+
+export default config
+```
+
+## TypeScript
+
+All types can be directly imported:
+
+```ts
+import { PluginOptions } from '@payloadcms/plugin-sentry'
+```
