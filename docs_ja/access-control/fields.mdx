@@ -1,0 +1,201 @@
+---
+title: フィールドアクセス制御
+label: フィールド
+order: 30
+desc: フィールドレベルのアクセス制御により、どのユーザーがどのフィールドを作成、読み取り、更新できるかを定義できます。
+keywords: フィールド, アクセス制御, 権限, ドキュメント, コンテンツ管理システム, cms, ヘッドレス, javascript, node, react, nextjs
+---
+
+フィールドアクセス制御は、[フィールド](../fields/overview)レベルでアクセスを制限し、そのフィールドに関連する[管理画面](../admin/overview)内で何を見ることができ、何を見ることができないかを制御するために使用される[アクセス制御](../access-control/overview)です。
+
+フィールドにアクセス制御を追加するには、[フィールド設定](../fields/overview)で`access`プロパティを使用します：
+
+```ts
+import type { Field } from 'payload'
+
+export const FieldWithAccessControl: Field = {
+  // ...
+  access: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+## 設定オプション
+
+アクセス制御はリクエストの操作に固有です。
+
+フィールドにアクセス制御を追加するには、[フィールド設定](../fields/overview)で`access`プロパティを使用します：
+
+```ts
+import type { Field } from 'payload';
+
+export const FieldWithAccessControl: Field = {
+  // ...
+  // highlight-start
+  access: {
+    create: () => {...},
+    read: () => {...},
+    update: () => {...},
+  },
+  // highlight-end
+}
+```
+
+以下のオプションが利用可能です：
+
+| 関数         | アクセスを許可/拒否                                                    |
+| ------------ | -------------------------------------------------------------------- |
+| **`create`** | `create`操作で使用されます。[詳細](#create)。                        |
+| **`read`**   | `find`および`findByID`操作で使用されます。[詳細](#read)。            |
+| **`update`** | `update`操作で使用されます。[詳細](#update)。                        |
+
+### Create
+
+`create`リクエストでフィールドへのアクセスを許可/拒否するブール値を返します。
+
+フィールドにcreateアクセス制御を追加するには、[フィールド設定](../fields/overview)で`create`プロパティを使用します：
+
+```ts
+import type { Field } from 'payload'
+
+export const FieldWithCreateAccess: Field = {
+  // ...
+  access: {
+    // highlight-start
+    create: ({ req: { user }, data }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`create`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`**  | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`data`** | ドキュメントの作成に渡されるデータ。                                                                                  |
+
+### Read
+
+`read`リクエストでフィールドへのアクセスを許可/拒否するブール値を返します。
+
+フィールドにreadアクセス制御を追加するには、[フィールド設定](../fields/overview)で`read`プロパティを使用します：
+
+```ts
+import type { Field } from 'payload'
+
+export const FieldWithReadAccess: Field = {
+  // ...
+  access: {
+    // highlight-start
+    read: ({ req: { user }, data }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`read`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`**  | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`data`** | 読み取られているドキュメント。                                                                                        |
+
+### Update
+
+`update`リクエストでフィールドへのアクセスを許可/拒否するブール値を返します。
+
+フィールドにupdateアクセス制御を追加するには、[フィールド設定](../fields/overview)で`update`プロパティを使用します：
+
+```ts
+import type { Field } from 'payload'
+
+export const FieldWithUpdateAccess: Field = {
+  // ...
+  access: {
+    // highlight-start
+    update: ({ req: { user }, data, siblingData }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`update`関数には以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`**        | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`data`**       | 更新されているドキュメント。                                                                                          |
+| **`siblingData`** | 同じレベルの他のフィールドのデータ。                                                                                  |
+
+## 例
+
+以下は、フィールドレベルのアクセス制御を使用した実際の例です：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const Posts: CollectionConfig = {
+  slug: 'posts',
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      required: true,
+    },
+    {
+      name: 'content',
+      type: 'richText',
+      required: true,
+    },
+    {
+      name: 'publishedDate',
+      type: 'date',
+      access: {
+        // 管理者のみが公開日を設定可能
+        create: ({ req: { user } }) => {
+          return user?.roles?.includes('admin')
+        },
+        update: ({ req: { user } }) => {
+          return user?.roles?.includes('admin')
+        },
+      },
+    },
+    {
+      name: 'internalNotes',
+      type: 'textarea',
+      access: {
+        // 内部メモは管理者のみ閲覧可能
+        read: ({ req: { user } }) => {
+          return user?.roles?.includes('admin')
+        },
+        create: ({ req: { user } }) => {
+          return user?.roles?.includes('admin')
+        },
+        update: ({ req: { user } }) => {
+          return user?.roles?.includes('admin')
+        },
+      },
+    },
+  ],
+}
+```
+
+この例では：
+- `publishedDate`フィールドは管理者のみが作成・更新可能
+- `internalNotes`フィールドは管理者のみが読み取り・作成・更新可能
+
+## 重要な注意点
+
+- フィールドアクセス制御は、そのフィールドが属するコレクションまたはグローバルのアクセス制御と組み合わせて動作します
+- フィールドへのアクセスが拒否された場合、そのフィールドは管理画面に表示されません
+- APIレスポンスでは、アクセスが拒否されたフィールドは除外されます
+- アクセス制御関数は同期または非同期で実行できます
