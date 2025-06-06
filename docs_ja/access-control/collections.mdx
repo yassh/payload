@@ -1,0 +1,338 @@
+---
+title: コレクションアクセス制御
+label: コレクション
+order: 20
+desc: コレクションレベルのアクセス制御により、どのユーザーがコレクションを作成、読み取り、更新、削除できるかを定義できます。
+keywords: コレクション, アクセス制御, 権限, ドキュメント, コンテンツ管理システム, cms, ヘッドレス, javascript, node, react, nextjs
+---
+
+コレクションアクセス制御は、[コレクション](../getting-started/concepts#collections)内のドキュメントへのアクセスを制限し、そのコレクションに関連する[管理画面](../admin/overview)内で何を見ることができ、何を見ることができないかを制御するために使用される[アクセス制御](../access-control/overview)です。
+
+コレクションにアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`access`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithAccessControl: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+## 設定オプション
+
+アクセス制御はリクエストの操作に固有です。
+
+コレクションにアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`access`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload';
+
+export const CollectionWithAccessControl: CollectionConfig = {
+  // ...
+  // highlight-start
+  access: {
+    create: () => {...},
+    read: () => {...},
+    update: () => {...},
+    delete: () => {...},
+
+    // Auth-enabled Collections only
+    admin: () => {...},
+    unlock: () => {...},
+
+    // Version-enabled Collections only
+    readVersions: () => {...},
+  },
+  // highlight-end
+}
+```
+
+以下のオプションが利用可能です：
+
+| 関数         | アクセスを許可/拒否                                                    |
+| ------------ | -------------------------------------------------------------------- |
+| **`create`** | `create`操作で使用されます。[詳細](#create)。                        |
+| **`read`**   | `find`および`findByID`操作で使用されます。[詳細](#read)。            |
+| **`update`** | `update`操作で使用されます。[詳細](#update)。                        |
+| **`delete`** | `delete`操作で使用されます。[詳細](#delete)。                        |
+
+コレクションが[`認証`](../authentication/overview)をサポートしている場合、以下の追加オプションが利用可能です：
+
+| 関数         | アクセスを許可/拒否                                                                      |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| **`admin`**  | [管理画面](../admin/overview)へのアクセスを制限するために使用されます。[詳細](#admin)。 |
+| **`unlock`** | どのユーザーが`unlock`操作にアクセスできるかを制限するために使用されます。[詳細](#unlock)。 |
+
+コレクションが[バージョン](../versions/overview)をサポートしている場合、以下の追加オプションが利用可能です：
+
+| 関数               | アクセスを許可/拒否                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`readVersions`** | 誰がバージョンを読み取ることができ、誰ができないかを制御するために使用されます。管理UIのバージョン表示アクセスを自動的に制限します。[詳細](#read-versions)。 |
+
+### Create
+
+`create`リクエストへのアクセスを許可/拒否するブール値を返します。
+
+コレクションにcreateアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`create`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithCreateAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    create: ({ req: { user }, data }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`create`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`**  | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`data`** | ドキュメントの作成に渡されるデータ。                                                                                  |
+
+### Read
+
+`read`リクエストへのアクセスを許可/拒否するブール値を返します。
+
+コレクションにreadアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`read`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithReadAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    read: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+<Banner type="success">
+  **ヒント：** [クエリ](../queries/overview)を返すことで、制約に一致するドキュメントのみに制限できます。これは、ユーザーの特定のドキュメントへのアクセスを制限するのに役立ちます。[詳細](../queries/overview)。
+</Banner>
+
+アプリケーションがより複雑になるにつれて、関数を別のファイルで定義し、それらをコレクション設定にインポートすることをお勧めします：
+
+```ts
+import type { Access } from 'payload'
+
+export const canReadPage: Access = ({ req: { user } }) => {
+  // 認証されたユーザーを許可
+  if (user) {
+    return true
+  }
+
+  // クエリを返すことで、ゲストユーザーは公開ドキュメントを読み取ることができます
+  // 注意：これはコレクションに`isPublic`チェックボックスフィールドがあることを前提としています
+  return {
+    isPublic: {
+      equals: true,
+    },
+  }
+}
+```
+
+`read`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`** | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`id`**  | `findByID`内でリクエストされたドキュメントの`id`。                                                                             |
+
+### Update
+
+`update`リクエストへのアクセスを許可/拒否するブール値を返します。
+
+コレクションにupdateアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`update`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithUpdateAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    update: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+<Banner type="success">
+  **ヒント：** [クエリ](../queries/overview)を返すことで、制約に一致するドキュメントのみに制限できます。これは、ユーザーの特定のドキュメントへのアクセスを制限するのに役立ちます。[詳細](../queries/overview)。
+</Banner>
+
+アプリケーションがより複雑になるにつれて、関数を別のファイルで定義し、それらをコレクション設定にインポートすることをお勧めします：
+
+```ts
+import type { Access } from 'payload'
+
+export const canUpdateUser: Access = ({ req: { user }, id }) => {
+  // 'admin'の役割を持つユーザーを許可
+  if (user.roles && user.roles.some((role) => role === 'admin')) {
+    return true
+  }
+
+  // 他のユーザーは自分自身のみを更新することを許可
+  return user.id === id
+}
+```
+
+`update`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`**  | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`id`**   | 更新をリクエストされたドキュメントの`id`。                                                                                         |
+| **`data`** | ドキュメントの更新に渡されるデータ。                                                                                  |
+
+### Delete
+
+Update関数と同様に、どのユーザーがどのドキュメントを削除できるかを制限するブール値または[クエリ制約](/docs/queries/overview)を返します。
+
+コレクションにdeleteアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`delete`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithDeleteAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    delete: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+アプリケーションがより複雑になるにつれて、関数を別のファイルで定義し、それらをコレクション設定にインポートすることをお勧めします：
+
+```ts
+import type { Access } from 'payload'
+
+export const canDeleteCustomer: Access = async ({ req, id }) => {
+  if (!id) {
+    // `id`なしでは不確定なので、管理UIが削除するコントロールを表示することを許可
+    return true
+  }
+
+  // `id`を使用して別のコレクションをクエリ
+  const result = await req.payload.find({
+    collection: 'contracts',
+    limit: 0,
+    depth: 0,
+    where: {
+      customer: { equals: id },
+    },
+  })
+
+  return result.totalDocs === 0
+}
+```
+
+`delete`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`req`** | 現在ログインしているユーザーである追加の`user`プロパティを持つ[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+| **`id`**  | 削除をリクエストされたドキュメントの`id`。                                                                                                                  |
+
+### Admin
+
+コレクションが[管理画面](../admin/overview#the-admin-user-collection)へのアクセスに使用される場合、`Admin`アクセス制御関数は、現在ログインしているユーザーが管理UIにアクセスできるかどうかを決定します。
+
+コレクションにAdminアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`admin`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithAdminAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    admin: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`admin`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`** | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+
+### Unlock
+
+[ログイン試行の失敗が多すぎる](/docs/authentication/overview#config-options)ために認証が正常に行えずブロックされている可能性のある他のユーザーを[ロック解除](/docs/authentication/operations#unlock)できるユーザーを決定します。
+
+コレクションにUnlockアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`unlock`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithUnlockAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    unlock: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`unlock`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`** | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
+
+### Read Versions
+
+コレクションで[バージョン](../versions/overview)が有効になっている場合、`readVersions`アクセス制御関数は、現在ログインしているユーザーがドキュメントのバージョン履歴にアクセスできるかどうかを決定します。
+
+コレクションにRead Versionsアクセス制御を追加するには、[コレクション設定](../configuration/collections)で`readVersions`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithVersionsAccess: CollectionConfig = {
+  // ...
+  access: {
+    // highlight-start
+    readVersions: ({ req: { user } }) => {
+      return Boolean(user)
+    },
+    // highlight-end
+  },
+}
+```
+
+`readVersions`関数には以下の引数が提供されます：
+
+| オプション | 説明                                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`req`** | 現在認証されている`user`を含む[Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。 |
