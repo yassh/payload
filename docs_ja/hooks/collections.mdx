@@ -1,0 +1,499 @@
+---
+title: コレクションフック
+label: コレクション
+order: 20
+desc: コレクションにフックを追加できます。beforeChange、afterRead、afterDeleteなど、複数のフックタイプが利用可能です。
+keywords: フック, コレクション, 設定, 構成, ドキュメント, コンテンツ管理システム, cms, ヘッドレス, javascript, node, react, nextjs
+---
+
+コレクションフックは、特定の[コレクション](../configuration/collections)内のドキュメントに対して実行される[フック](./overview)です。ドキュメントのライフサイクルの特定のイベント中に独自のロジックを実行できます。
+
+コレクションにフックを追加するには、[コレクション設定](../configuration/collections)で`hooks`プロパティを使用します：
+
+```ts
+import type { CollectionConfig } from 'payload'
+
+export const CollectionWithHooks: CollectionConfig = {
+  // ...
+  hooks: {
+    // highlight-line
+    // ...
+  },
+}
+```
+
+<Banner type="info">
+  **ヒント：** フィールドレベルでフックを設定して、フックロジックを特定のフィールドに分離することもできます。[詳細](./fields)。
+</Banner>
+
+## 設定オプション
+
+すべてのコレクションフックは[同期または非同期関数](./overview#async-vs-synchronous)の配列を受け入れます。各コレクションフックは、そのタイプに基づいて特定の引数を受け取り、特定の出力を変更する機能を持ちます。
+
+```ts
+import type { CollectionConfig } from 'payload';
+
+export const CollectionWithHooks: CollectionConfig = {
+  // ...
+  // highlight-start
+  hooks: {
+    beforeOperation: [(args) => {...}],
+    beforeValidate: [(args) => {...}],
+    beforeDelete: [(args) => {...}],
+    beforeChange: [(args) => {...}],
+    beforeRead: [(args) => {...}],
+    afterChange: [(args) => {...}],
+    afterRead: [(args) => {...}],
+    afterDelete: [(args) => {...}],
+    afterOperation: [(args) => {...}],
+    afterError: [(args) => {....}],
+
+    // 認証有効フック
+    beforeLogin: [(args) => {...}],
+    afterLogin: [(args) => {...}],
+    afterLogout: [(args) => {...}],
+    afterRefresh: [(args) => {...}],
+    afterMe: [(args) => {...}],
+    afterForgotPassword: [(args) => {...}],
+    refresh: [(args) => {...}],
+    me: [(args) => {...}],
+  },
+  // highlight-end
+}
+```
+
+### beforeOperation
+
+`beforeOperation`フックは、操作が受け入れる引数を変更したり、操作が開始される前に実行される副作用を実行するために使用できます。
+
+利用可能なコレクション操作には、`create`、`read`、`update`、`delete`、`login`、`refresh`、`forgotPassword`があります。
+
+```ts
+import type { CollectionBeforeOperationHook } from 'payload'
+
+const beforeOperationHook: CollectionBeforeOperationHook = async ({
+  args,
+  operation,
+  req,
+}) => {
+  return args // 必要に応じて変更された操作引数を返す
+}
+```
+
+`beforeOperation`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`operation`**  | このフックが実行されている操作の名前。                                                                                   |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### beforeValidate
+
+`create`および`update`操作中に実行されます。このフックにより、受信データがサーバーサイドで検証される前にデータを追加または整形できます。
+
+これはクライアントサイドの検証の前には実行されないことに注意してください。フロントエンドでカスタムフィールドコンポーネントをレンダリングし、`validate`関数を提供する場合、検証が実行される順序は次のとおりです：
+
+1. `validate`がクライアントで実行される
+2. 成功した場合、`beforeValidate`がサーバーで実行される
+3. `validate`がサーバーで実行される
+
+```ts
+import type { CollectionBeforeValidateHook } from 'payload'
+
+const beforeValidateHook: CollectionBeforeValidateHook = async ({ data }) => {
+  return data
+}
+```
+
+`beforeValidate`フックには以下の引数が提供されます：
+
+| オプション        | 説明                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`**  | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**     | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`data`**        | 操作を通じて渡される受信データ。                                                                                       |
+| **`operation`**   | このフックが実行されている操作の名前。                                                                                   |
+| **`originalDoc`** | 変更が適用される前のドキュメント。                                                                                      |
+| **`req`**         | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### beforeChange
+
+検証の直前に、beforeChangeフックはcreateおよびupdate操作中に実行されます。この段階では、データは未検証のユーザー入力として扱われるべきです。必須フィールドが存在するか、フィールドが正しい形式であるかの保証はありません。そのため、このデータを副作用に使用するには手動検証が必要です。保存されるデータの形状をオプションで変更できます。
+
+```ts
+import type { CollectionBeforeChangeHook } from 'payload'
+
+const beforeChangeHook: CollectionBeforeChangeHook = async ({ data }) => {
+  return data
+}
+```
+
+`beforeChange`フックには以下の引数が提供されます：
+
+| オプション        | 説明                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`**  | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**     | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`data`**        | 操作を通じて渡される受信データ。                                                                                       |
+| **`operation`**   | このフックが実行されている操作の名前。                                                                                   |
+| **`originalDoc`** | 変更が適用される前のドキュメント。                                                                                      |
+| **`req`**         | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### afterChange
+
+ドキュメントが作成または更新された後、`afterChange`フックが実行されます。このフックは、グローバル内の総売上などの統計の再計算、ユーザープロファイルの変更をCRMに同期するなどに役立ちます。
+
+```ts
+import type { CollectionAfterChangeHook } from 'payload'
+
+const afterChangeHook: CollectionAfterChangeHook = async ({ doc }) => {
+  return doc
+}
+```
+
+`afterChange`フックには以下の引数が提供されます：
+
+| オプション        | 説明                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`**  | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**     | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`doc`**         | 変更が適用された後の結果ドキュメント。                                                                                     |
+| **`operation`**   | このフックが実行されている操作の名前。                                                                                   |
+| **`previousDoc`** | 変更が適用される前のドキュメント。                                                                                             |
+| **`req`**         | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### beforeRead
+
+`find`および`findByID`操作が`afterRead`によって出力用に変換される前に実行されます。このフックは、隠しフィールドが削除される前、ローカライズされたフィールドが要求されたロケールにフラット化される前に発生します。このフックを使用すると、`doc`引数を通じてすべてのロケールとすべての隠しフィールドが提供されます。
+
+```ts
+import type { CollectionBeforeReadHook } from 'payload'
+
+const beforeReadHook: CollectionBeforeReadHook = async ({ doc }) => {
+  return doc
+}
+```
+
+`beforeRead`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`doc`**        | 変更が適用された後の結果ドキュメント。                                                                                     |
+| **`query`**      | リクエストの[クエリ](../queries/overview)。                                                                                      |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### afterRead
+
+ドキュメントが返される前の最後のステップとして実行されます。ロケールをフラット化し、保護されたフィールドを隠し、ユーザーがアクセス権を持たないフィールドを削除します。
+
+```ts
+import type { CollectionAfterReadHook } from 'payload'
+
+const afterReadHook: CollectionAfterReadHook = async ({ doc }) => {
+  return doc
+}
+```
+
+`afterRead`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`doc`**        | 変更が適用された後の結果ドキュメント。                                                                                     |
+| **`query`**      | リクエストの[クエリ](../queries/overview)。                                                                                      |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### beforeDelete
+
+`delete`操作の前に実行されます。戻り値は破棄されます。
+
+```ts
+import type { CollectionBeforeDeleteHook } from 'payload';
+
+const beforeDeleteHook: CollectionBeforeDeleteHook = async ({
+  req,
+  id,
+}) => {...}
+```
+
+`beforeDelete`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`id`**         | 削除されるドキュメントのID。                                                                                                 |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### afterDelete
+
+`delete`操作がデータベースからレコードを削除した直後に実行されます。戻り値は破棄されます。
+
+```ts
+import type { CollectionAfterDeleteHook } from 'payload';
+
+const afterDeleteHook: CollectionAfterDeleteHook = async ({
+  req,
+  id,
+  doc,
+}) => {...}
+```
+
+`afterDelete`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`doc`**        | 変更が適用された後の結果ドキュメント。                                                                                     |
+| **`id`**         | 削除されたドキュメントのID。                                                                                              |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### afterOperation
+
+`afterOperation`フックは、操作の結果を変更したり、操作が完了した後に実行される副作用を実行するために使用できます。
+
+利用可能なコレクション操作には、`create`、`find`、`findByID`、`update`、`updateByID`、`delete`、`deleteByID`、`login`、`refresh`、`forgotPassword`があります。
+
+```ts
+import type { CollectionAfterOperationHook } from 'payload'
+
+const afterOperationHook: CollectionAfterOperationHook = async ({ result }) => {
+  return result
+}
+```
+
+`afterOperation`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`args`**       | 操作に渡される引数。                                                                                                              |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+| **`operation`**  | このフックが実行されている操作の名前。                                                                                           |
+| **`result`**     | 変更前の操作の結果。                                                                                                    |
+
+### afterError
+
+`afterError`フックは、Payloadアプリケーションでエラーが発生したときにトリガーされます。これは、エラーをサードパーティサービスにログ記録したり、開発チームにメールを送信したり、エラーをSentryやDataDogにログ記録するなどに役立ちます。出力は結果オブジェクト/ステータスコードを変換するために使用できます。
+
+```ts
+import type { CollectionAfterErrorHook } from 'payload';
+
+const afterErrorHook: CollectionAfterErrorHook = async ({
+  req,
+  id,
+  doc,
+}) => {...}
+```
+
+`afterError`フックには以下の引数が提供されます：
+
+| 引数                | 説明                                                                                                                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`error`**         | 発生したエラー。                                                                                                                                                                        |
+| **`context`**       | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                                                                                                 |
+| **`graphqlResult`** | GraphQLコンテキスト内でフックが実行される場合に利用可能なGraphQL結果オブジェクト。                                                                                                          |
+| **`req`**           | 現在認証されている`user`と Local API インスタンス`payload`を含む`PayloadRequest`オブジェクト（[Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)を拡張）。 |
+| **`collection`**    | このフックが実行されている[コレクション](../configuration/collections)。                                                                                                           |
+| **`result`**        | RESTコンテキストからフックが実行される場合に利用可能な、フォーマットされたエラー結果オブジェクト。                                                                                       |
+
+### beforeLogin
+
+[認証有効コレクション](../authentication/overview)の場合、このフックは提供された認証情報を持つユーザーが存在するが、トークンが生成されてレスポンスに追加される前の`login`操作中に実行されます。返されるユーザーをオプションで変更したり、ログイン操作を拒否するためにエラーを投げることができます。
+
+```ts
+import type { CollectionBeforeLoginHook } from 'payload'
+
+const beforeLoginHook: CollectionBeforeLoginHook = async ({ user }) => {
+  return user
+}
+```
+
+`beforeLogin`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+| **`user`**       | ログインしているユーザー。                                                                                                             |
+
+### afterLogin
+
+[認証有効コレクション](../authentication/overview)の場合、このフックは成功した`login`操作の後に実行されます。返されるユーザーをオプションで変更できます。
+
+```ts
+import type { CollectionAfterLoginHook } from 'payload';
+
+const afterLoginHook: CollectionAfterLoginHook = async ({
+  user,
+  token,
+}) => {...}
+```
+
+`afterLogin`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+| **`token`**      | ユーザー用に生成されたトークン。                                                                                                                     |
+| **`user`**       | ログインしているユーザー。                                                                                                             |
+
+### afterLogout
+
+[認証有効コレクション](../authentication/overview)の場合、このフックは`logout`操作の後に実行されます。
+
+```ts
+import type { CollectionAfterLogoutHook } from 'payload';
+
+const afterLogoutHook: CollectionAfterLogoutHook = async ({
+  req,
+}) => {...}
+```
+
+`afterLogout`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+
+### afterMe
+
+[認証有効コレクション](../authentication/overview)の場合、このフックは`me`操作の後に実行されます。
+
+```ts
+import type { CollectionAfterMeHook } from 'payload';
+
+const afterMeHook: CollectionAfterMeHook = async ({
+  req,
+  response,
+}) => {...}
+```
+
+`afterMe`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+| **`response`**   | 返されるレスポンス。                                                                                                               |
+
+### afterRefresh
+
+[認証有効コレクション](../authentication/overview)の場合、このフックは`refresh`操作の後に実行されます。
+
+```ts
+import type { CollectionAfterRefreshHook } from 'payload';
+
+const afterRefreshHook: CollectionAfterRefreshHook = async ({
+  token,
+}) => {...}
+```
+
+`afterRefresh`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。                                                 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                                                               |
+| **`exp`**        | トークンの有効期限。                                                                                                                     |
+| **`req`**        | [Web Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)オブジェクト。[Local API](../local-api/overview)操作ではモックされます。 |
+| **`token`**      | 新しく更新されたユーザートークン。                                                                                                                       |
+
+### afterForgotPassword
+
+[認証有効コレクション](../authentication/overview)の場合、このフックは成功した`forgotPassword`操作の後に実行されます。戻り値は破棄されます。
+
+```ts
+import type { CollectionAfterForgotPasswordHook } from 'payload'
+
+const afterForgotPasswordHook: CollectionAfterForgotPasswordHook = async ({
+  args,
+  context,
+  collection,
+}) => {...}
+```
+
+`afterForgotPassword`フックには以下の引数が提供されます：
+
+| オプション       | 説明                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| **`args`**       | 操作に渡される引数。                                              |
+| **`collection`** | このフックが実行されている[コレクション](../configuration/collections)。 |
+| **`context`**    | フック間で渡されるカスタムコンテキスト。[詳細](./context)。                       |
+
+### refresh
+
+[認証有効コレクション](../authentication/overview)の場合、このフックにより、`refresh`操作のデフォルト動作を独自のものでオプションで置き換えることができます。フックから値をオプションで返すと、操作は独自のロジックを実行せずに続行します。
+
+```ts
+import type { CollectionRefreshHook } from 'payload'
+
+const myRefreshHook: CollectionRefreshHook = async ({
+  args,
+  user,
+}) => {...}
+```
+
+`afterRefresh`フックには以下の引数が提供されます：
+
+| オプション     | 説明                              |
+| ---------- | ---------------------------------------- |
+| **`args`** | 操作に渡される引数。 |
+| **`user`** | ログインしているユーザー。                |
+
+### me
+
+[認証有効コレクション](../authentication/overview)の場合、このフックにより、`me`操作のデフォルト動作を独自のものでオプションで置き換えることができます。フックから値をオプションで返すと、操作は独自のロジックを実行せずに続行します。
+
+```ts
+import type { CollectionMeHook } from 'payload'
+
+const meHook: CollectionMeHook = async ({
+  args,
+  user,
+}) => {...}
+```
+
+`me`フックには以下の引数が提供されます：
+
+| オプション     | 説明                              |
+| ---------- | ---------------------------------------- |
+| **`args`** | 操作に渡される引数。 |
+| **`user`** | ログインしているユーザー。                |
+
+## TypeScript
+
+Payloadは各コレクションフックの型をエクスポートしており、以下のようにアクセスできます：
+
+```ts
+import type {
+  CollectionBeforeOperationHook,
+  CollectionBeforeValidateHook,
+  CollectionBeforeChangeHook,
+  CollectionAfterChangeHook,
+  CollectionAfterReadHook,
+  CollectionBeforeReadHook,
+  CollectionBeforeDeleteHook,
+  CollectionAfterDeleteHook,
+  CollectionBeforeLoginHook,
+  CollectionAfterLoginHook,
+  CollectionAfterLogoutHook,
+  CollectionAfterRefreshHook,
+  CollectionAfterMeHook,
+  CollectionAfterForgotPasswordHook,
+  CollectionRefreshHook,
+  CollectionMeHook,
+} from 'payload'
+```
